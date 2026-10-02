@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   RECIPIENTS,
   randomHex,
@@ -79,10 +79,13 @@ export default function DemoLab() {
   const logBoxRef = useRef<HTMLDivElement>(null);
   const cancelledRef = useRef(false);
   const runningRef = useRef(false);
+  const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
 
   useEffect(() => {
     return () => {
       cancelledRef.current = true;
+      timersRef.current.forEach(clearTimeout);
+      timersRef.current = [];
     };
   }, []);
 
@@ -102,10 +105,11 @@ export default function DemoLab() {
   const sleep = (ms: number) =>
     new Promise<void>((resolve, reject) => {
       const id = setTimeout(() => {
+        timersRef.current = timersRef.current.filter((t) => t !== id);
         if (cancelledRef.current) reject(new Error("cancelled"));
         else resolve();
       }, ms);
-      void id;
+      timersRef.current.push(id);
     });
 
   const beginRun = () => {
@@ -267,7 +271,7 @@ export default function DemoLab() {
     }
   };
 
-  const stepDesc = useMemo(() => STEPS, []);
+  const stepDesc = STEPS;
 
   return (
     <div className="grid gap-6 lg:grid-cols-[1.05fr_0.95fr]">
@@ -288,7 +292,8 @@ export default function DemoLab() {
         <input
           value={docName}
           onChange={(e) => setDocName(e.target.value)}
-          className="mt-2 w-full rounded-xl border border-white/12 bg-black/40 px-4 py-3 font-mono text-sm text-white outline-none focus:border-[#e87722]/70"
+          disabled={running}
+          className="mt-2 w-full rounded-xl border border-white/12 bg-black/40 px-4 py-3 font-mono text-sm text-white outline-none focus:border-[#e87722]/70 disabled:opacity-50"
           placeholder="OP-PLAN-AURORA.pdf"
         />
 
@@ -300,7 +305,9 @@ export default function DemoLab() {
             <button
               key={r.id}
               onClick={() => setRecipientIdx(i)}
-              className={`rounded-xl border px-3 py-3 text-left transition-all ${
+              disabled={running}
+              aria-pressed={i === recipientIdx}
+              className={`rounded-xl border px-3 py-3 text-left transition-all disabled:cursor-not-allowed disabled:opacity-60 ${
                 i === recipientIdx
                   ? "border-[#e87722] bg-[#e87722]/15 shadow-[0_0_24px_rgba(232,119,34,0.35)]"
                   : "border-white/10 bg-white/[0.03] hover:border-white/25"
@@ -319,7 +326,7 @@ export default function DemoLab() {
           <button
             onClick={runPipeline}
             disabled={running}
-            className="group relative flex-1 overflow-hidden rounded-xl bg-gradient-to-r from-[#e87722] to-[#ff9a3c] px-5 py-3.5 text-sm font-extrabold uppercase tracking-wider text-black disabled:opacity-50"
+            className="btn-primary group relative flex-1 overflow-hidden rounded-xl px-5 py-3.5 text-sm font-extrabold uppercase tracking-wider disabled:opacity-50"
           >
             <span className="relative z-10">{running ? "◌ Running pipeline…" : "▶ Run secure pipeline"}</span>
             <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/40 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
@@ -333,10 +340,14 @@ export default function DemoLab() {
           </button>
         </div>
 
-        <label className="mt-4 flex cursor-pointer items-center gap-3 text-[13px] text-white/70">
+        <div className="mt-4 flex cursor-pointer items-center gap-3 text-[13px] text-white/70">
           <button
             onClick={() => setTamper((v) => !v)}
-            className={`h-6 w-11 rounded-full p-1 transition-colors ${tamper ? "bg-red-500" : "bg-white/15"}`}
+            disabled={running}
+            role="switch"
+            aria-checked={tamper}
+            aria-label="Tamper leaked copy"
+            className={`h-6 w-11 shrink-0 rounded-full p-1 transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${tamper ? "bg-red-500" : "bg-white/15"}`}
           >
             <span
               className={`block h-4 w-4 rounded-full bg-white transition-transform ${tamper ? "translate-x-5" : ""}`}
@@ -344,7 +355,7 @@ export default function DemoLab() {
           </button>
           Tamper leaked copy (strip / compress watermark) — expect{" "}
           <span className="font-bold text-red-300">no-guess</span> verdict
-        </label>
+        </div>
 
         {/* stepper */}
         <div className="mt-6 space-y-2">
