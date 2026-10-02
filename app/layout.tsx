@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import type { ReactNode } from "react";
 import "./globals.css";
 
 // Offline system font stacks — no network requests, no Google Fonts.
@@ -13,7 +14,7 @@ export const metadata: Metadata = {
     "SAGE X is an offline, air-gapped, post-quantum document distribution system with recipient-level attribution and decryption provenance. AES-256-GCM, ML-KEM-768 + X25519, ML-DSA-65, forensic watermarking, permissioned DLT.",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html
       lang="en"
